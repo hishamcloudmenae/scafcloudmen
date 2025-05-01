@@ -1,0 +1,198 @@
+#!/bin/bash
+
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+echo "📦 Welcome to Cloudmen Module Scaffold Tool"
+
+read -p "📦 Enter your module name: " MODULE_NAME
+read -p "📁 Enter absolute path to create the module in: " MODULE_PATH
+
+if [ ! -d "$MODULE_PATH" ]; then
+  echo "❌ The directory does not exist: $MODULE_PATH"
+  exit 1
+fi
+
+FULL_PATH="$MODULE_PATH/$MODULE_NAME"
+mkdir -p "$FULL_PATH"
+cd "$FULL_PATH" || exit 1
+
+read -p "🔥 Enter Odoo version (e.g. 15.0): " ODOO_VERSION
+
+read -p "📂 Add controllers folder? (y/n): " ADD_CONTROLLERS
+read -p "📂 Add models folder? (y/n): " ADD_MODELS
+read -p "📂 Add views folder? (y/n): " ADD_VIEWS
+read -p "📂 Add reports folder? (y/n): " ADD_REPORTS
+read -p "📂 Add demo folder? (y/n): " ADD_DEMO
+read -p "📂 Add security folder? (y/n): " ADD_SECURITY
+
+# Controllers
+if [ "$ADD_CONTROLLERS" == "y" ]; then
+  mkdir -p controllers
+  cat > controllers/__init__.py <<EOF
+# -*- coding: utf-8 -*-
+from . import controllers
+EOF
+
+  cat > controllers/controllers.py <<EOF
+# -*- coding: utf-8 -*-
+# from odoo import http
+
+# class ${MODULE_NAME^}(http.Controller):
+#     @http.route('/$MODULE_NAME/$MODULE_NAME', auth='public')
+#     def index(self, **kw):
+#         return "Hello, world"
+
+#     @http.route('/$MODULE_NAME/$MODULE_NAME/objects', auth='public')
+#     def list(self, **kw):
+#         return http.request.render('$MODULE_NAME.listing', {
+#             'root': '/$MODULE_NAME/$MODULE_NAME',
+#             'objects': http.request.env['$MODULE_NAME.$MODULE_NAME'].search([]),
+#         })
+
+#     @http.route('/$MODULE_NAME/$MODULE_NAME/objects/<model(\"$MODULE_NAME.$MODULE_NAME\"):obj>', auth='public')
+#     def object(self, obj, **kw):
+#         return http.request.render('$MODULE_NAME.object', {
+#             'object': obj
+#         })
+EOF
+fi
+
+# Models
+if [ "$ADD_MODELS" == "y" ]; then
+  mkdir -p models
+  cat > models/__init__.py <<EOF
+# -*- coding: utf-8 -*-
+from . import models
+EOF
+
+  cat > models/models.py <<EOF
+# from odoo import models, fields, api, _
+# from datetime import datetime, date, timedelta
+# from odoo.exceptions import ValidationError
+# from dateutil import relativedelta
+
+# class Company(models.Model):
+#     _inherit = 'your.model'
+
+#     field_test = fields.Char(string='Test', readonly=False, store=True)
+EOF
+fi
+
+# Views
+if [ "$ADD_VIEWS" == "y" ]; then
+  mkdir -p views
+  cat > views/views.xml <<EOF
+<odoo>
+  <data>
+    <!-- example list, form, actions, menus... -->
+  </data>
+</odoo>
+EOF
+fi
+
+# Reports
+if [ "$ADD_REPORTS" == "y" ]; then
+  mkdir -p reports
+  cat > reports/custom_report.xml <<EOF
+<odoo>
+</odoo>
+EOF
+fi
+
+# Demo
+if [ "$ADD_DEMO" == "y" ]; then
+  mkdir -p demo
+  cat > demo/demo.xml <<EOF
+<odoo>
+    <data>
+<!--
+      <record id="object0" model="$MODULE_NAME.$MODULE_NAME">
+        <field name="name">Object 0</field>
+        <field name="value">0</field>
+      </record>
+-->
+    </data>
+</odoo>
+EOF
+fi
+
+# Security
+if [ "$ADD_SECURITY" == "y" ]; then
+  mkdir -p security
+  cat > security/ir.model.access.csv <<EOF
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_${MODULE_NAME}_model1,${MODULE_NAME}.${MODULE_NAME},model_${MODULE_NAME},,1,1,1,1
+EOF
+fi
+
+# ICON (copied to both locations)
+read -p "📷 Enter full path to your module icon (leave blank to use default): " ICON_PATH
+ICON_TARGET_DIR_1="static/src/img"
+ICON_TARGET_DIR_2="static/description"
+mkdir -p "$ICON_TARGET_DIR_1"
+mkdir -p "$ICON_TARGET_DIR_2"
+
+if [ -n "$ICON_PATH" ] && [ -f "$ICON_PATH" ]; then
+    cp "$ICON_PATH" "$ICON_TARGET_DIR_1/icon.png"
+    cp "$ICON_PATH" "$ICON_TARGET_DIR_2/icon.png"
+    echo "✅ Custom icon copied to both locations."
+else
+    DEFAULT_ICON="/usr/local/bin/static/src/img/icon.png"
+    if [ -f "$DEFAULT_ICON" ]; then
+        cp "$DEFAULT_ICON" "$ICON_TARGET_DIR_1/icon.png"
+        cp "$DEFAULT_ICON" "$ICON_TARGET_DIR_2/icon.png"
+        echo "ℹ️ Default icon copied to both locations."
+    else
+        echo "⚠️ No icon provided and default icon not found. Skipping icon."
+    fi
+fi
+
+# Root __init__.py
+echo "# -*- coding: utf-8 -*-" > __init__.py
+[ "$ADD_CONTROLLERS" == "y" ] && echo "from . import controllers" >> __init__.py
+[ "$ADD_MODELS" == "y" ] && echo "from . import models" >> __init__.py
+
+# Manifest inputs
+read -p "📝 Module Title (e.g. cloudmen_custom_invoice): " MODULE_TITLE
+read -p "📄 Summary: " SUMMARY
+read -p "📖 Description: " DESCRIPTION
+read -p "📁 Category: " CATEGORY
+
+# Manifest generation
+cat > __manifest__.py <<EOF
+# -*- coding: utf-8 -*-
+{
+    'name': "$MODULE_TITLE",
+    'summary': "$SUMMARY",
+    'description': "$DESCRIPTION This module is proprietary and licensed for use only by Cloudmen clients.",
+    'author': "Cloudmen",
+    'website': "https://www.cloudmen.ae",
+    'category': '$CATEGORY',
+    'version': '0.1',
+    'license': 'OPL-1',
+    'depends': ['base'],
+    'data': [
+EOF
+
+[ "$ADD_SECURITY" == "y" ] && echo "        # 'security/ir.model.access.csv'," >> __manifest__.py
+[ "$ADD_VIEWS" == "y" ] && echo "        'views/views.xml'," >> __manifest__.py
+[ "$ADD_REPORTS" == "y" ] && echo "        'reports/custom_report.xml'," >> __manifest__.py
+
+cat >> __manifest__.py <<EOF
+    ],
+    'demo': [
+EOF
+
+[ "$ADD_DEMO" == "y" ] && echo "        'demo/demo.xml'," >> __manifest__.py
+
+cat >> __manifest__.py <<EOF
+    ],
+    'images': ['static/src/img/icon.png'],
+    'installable': True,
+    'application': False,
+    'auto_install': False,
+}
+EOF
+
+echo -e "${GREEN}✅ Module '$MODULE_NAME' created successfully at: $FULL_PATH ${NC}"
